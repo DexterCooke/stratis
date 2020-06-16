@@ -1,4 +1,5 @@
 from collections import defaultdict
+from os import path
 import json
 import click
 
@@ -9,7 +10,22 @@ class Stratis:
         self.first_name = first_name
         self.last_name = last_name
 
+        if not path.exists('property_data_changes.json'):
+            with open('property_data_changes.json', 'w') as f:
+                people_list = self._get_people()
+                json.dump(people_list, f)
 
+        self.valid_residents = self._read_file('property_data_changes.json')
+
+
+
+    def is_resident_valid(self, first_name, last_name):
+        for idx, val in enumerate(self.valid_residents):
+            if first_name == str(self.valid_residents[idx]['first_name']) and last_name == str(self.valid_residents[idx]['last_name']):
+                return True
+        return False
+            
+ 
     def _read_file(self, file):
         """Read json file"""
         with open(file) as f:
@@ -49,6 +65,10 @@ class Stratis:
         Returns a json list of devices and roles of resident
         Returns: json
         """
+        if not self.is_resident_valid(res_first_name, res_last_name):
+            print("Resident doesn't live in building")
+            return 
+
         if self._is_user_admin():
             is_resident_admin = False
             people_list = self._get_people()
@@ -57,7 +77,19 @@ class Stratis:
                     if 'Admin' in people_list[idx]['roles']:
                         is_resident_admin = True
                     print(self._get_devices_for_resident(people_list[idx]['unit'], is_resident_admin))
+                    return 
 
+            
+            for idx, val in enumerate(self.valid_residents):
+                if res_first_name == self.valid_residents[idx]['first_name'] and res_last_name == self.valid_residents[idx]['last_name']:
+                    data = {
+                        "locks" : ['LockNess'],
+                        "lights": ['Sunnee'],
+                        "roles" : ['Resident'],
+                        "unit"  : self.valid_residents[idx]['unit'],
+                        "thermostat" : ['Warm-Me']
+                    }
+                    print(json.dumps(data))
 
     def _get_devices_for_resident(self, unit_number, is_resident_admin):
         """ 
@@ -103,15 +135,29 @@ class Stratis:
         return self.data['people']
 
     def move_resident(self, is_moved_in, res_first_name, res_last_name, unit_number):
-        data = {
-            'first_name': res_first_name,
-            'last_name' : res_last_name,
-            'unit'      : unit_number
-        }
-        with open('property_data_changes.json', 'a') as f:
-            json.dump(data, f)
-            f.write(",\n")
-            f.close()
+        if str(is_moved_in) == 'true':
+            data = {
+                'first_name': res_first_name,
+                'last_name' : res_last_name,
+                'roles'     : ['Resident'],
+                'unit'      : unit_number
+            }
+            if data not in self.valid_residents:
+                self.valid_residents.append(data)
+                with open('property_data_changes.json', 'w') as f:
+                    json.dump(self.valid_residents, f)
+                    f.write("\n")
+                    f.close()
+
+        if str(is_moved_in) == 'false':
+            for idx, val in enumerate(self.valid_residents):
+                if res_first_name == self.valid_residents[idx]['first_name'] and res_last_name == self.valid_residents[idx]['last_name']:
+                    del(self.valid_residents[idx])
+                    with open('property_data_changes.json', 'w') as f:
+                        json.dump(self.valid_residents, f)
+                        f.write("\n")
+                        f.close()
+            
 
         
 
@@ -145,13 +191,13 @@ def resident_names(stratis, unit_number):
     stratis.resident_names(unit_number)
 
 @cli.command()
-@click.argument('is_moved_in')
+@click.argument('is_moved_in', metavar='true')
 @click.argument('res_first_name', metavar='<res_first_name>')
 @click.argument('res_last_name', metavar='<res_last_name>')
 @click.argument('unit_number')
 @pass_stratis
-def move(stratis, is_moved_in, res_first_name, res_last_name, unit_number):
-    """Move resident in or out """
+def is_moved_in(stratis, is_moved_in, res_first_name, res_last_name, unit_number):
+    """Move in True, move out False """
     stratis.move_resident(is_moved_in, res_first_name, res_last_name, unit_number) 
 
 if __name__ == '__main__':
