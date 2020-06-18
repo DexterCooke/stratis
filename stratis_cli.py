@@ -10,16 +10,16 @@ class Stratis:
         self.first_name = first_name
         self.last_name = last_name
 
+        #Automatically create and fill property_data_changes.json with current residents
         if not path.exists('property_data_changes.json'):
-            with open('property_data_changes.json', 'w') as f:
-                people_list = self._get_people()
-                json.dump(people_list, f)
+            people_list = self._get_people()
+            self._write_file(people_list, 'property_data_changes.json')
 
         self.valid_residents = self._read_file('property_data_changes.json')
 
 
-
     def is_resident_valid(self, first_name, last_name):
+        """Determines if resident lives in the building"""
         for idx, val in enumerate(self.valid_residents):
             if first_name == str(self.valid_residents[idx]['first_name']) and last_name == str(self.valid_residents[idx]['last_name']):
                 return True
@@ -31,6 +31,13 @@ class Stratis:
         with open(file) as f:
             data = json.load(f)
         return data
+
+    def _write_file(self, data, file):
+        """Write json file"""
+        with open(file, 'w') as f:
+            json.dump(data, f)
+            # f.write("\n")
+
 
     def _is_user_admin(self):
         """
@@ -57,8 +64,17 @@ class Stratis:
             for idx, val in enumerate(people_list):
                 if str(unit_number) == people_list[idx]['unit']:
                     residents.append((people_list[idx]['first_name'], people_list[idx]['last_name']))
-            print(json.dumps(residents))
-
+            
+            #if resident not in property_data.json then check property_data_changes.json
+            if not residents:
+                for idx, val in enumerate(self.valid_residents):
+                    if str(unit_number) == self.valid_residents[idx]['unit']:
+                        residents.append((self.valid_residents[idx]['first_name'], self.valid_residents[idx]['last_name']))
+            if residents:
+                print(json.dumps(residents))
+            else:
+                print("Unit is empty")
+                    
 
     def resident_info(self, res_first_name, res_last_name):
         """
@@ -82,6 +98,7 @@ class Stratis:
             
             for idx, val in enumerate(self.valid_residents):
                 if res_first_name == self.valid_residents[idx]['first_name'] and res_last_name == self.valid_residents[idx]['last_name']:
+                    #dummy data for resident in property_data_changes.json
                     data = {
                         "locks" : ['LockNess'],
                         "lights": ['Sunnee'],
@@ -104,9 +121,9 @@ class Stratis:
         resident_data['unit'] = int(unit_number)
 
         #Create dictionaries with resident controlled devices
-        resident_thermostats = self._get_resident_controlled_devices(thermostats, is_resident_admin, unit_number, 'thermostat')
-        resident_lights = self._get_resident_controlled_devices(lights, is_resident_admin, unit_number, 'lights')
-        resident_locks = self._get_resident_controlled_devices(locks, is_resident_admin, unit_number, 'locks')
+        resident_thermostats = self._get_resident_controlled_device(thermostats, is_resident_admin, unit_number, 'thermostat')
+        resident_lights = self._get_resident_controlled_device(lights, is_resident_admin, unit_number, 'lights')
+        resident_locks = self._get_resident_controlled_device(locks, is_resident_admin, unit_number, 'locks')
 
         #Create dictionary with resident roles
         for idx, val in enumerate(people_list):
@@ -120,7 +137,8 @@ class Stratis:
 
         return json.dumps(resident_data)
 
-    def _get_resident_controlled_devices(self, device, is_resident_admin, unit_number, device_name):
+    def _get_resident_controlled_device(self, device, is_resident_admin, unit_number, device_name):
+        """Return dict of device controlled by resident"""
         resident_data = defaultdict(list)
         for idx, val in enumerate(device):
             if int(unit_number) == device[idx]['unit'] \
@@ -135,6 +153,7 @@ class Stratis:
         return self.data['people']
 
     def move_resident(self, is_moved_in, res_first_name, res_last_name, unit_number):
+        """Move resident in or out of unit and update property_data_changes.json"""
         if str(is_moved_in) == 'true':
             data = {
                 'first_name': res_first_name,
@@ -144,23 +163,14 @@ class Stratis:
             }
             if data not in self.valid_residents:
                 self.valid_residents.append(data)
-                with open('property_data_changes.json', 'w') as f:
-                    json.dump(self.valid_residents, f)
-                    f.write("\n")
-                    f.close()
+                self._write_file(self.valid_residents, 'property_data_changes.json')
 
         if str(is_moved_in) == 'false':
             for idx, val in enumerate(self.valid_residents):
                 if res_first_name == self.valid_residents[idx]['first_name'] and res_last_name == self.valid_residents[idx]['last_name']:
                     del(self.valid_residents[idx])
-                    with open('property_data_changes.json', 'w') as f:
-                        json.dump(self.valid_residents, f)
-                        f.write("\n")
-                        f.close()
+                    self._write_file(self.valid_residents, 'property_data_changes.json')
             
-
-        
-
 
 
 pass_stratis = click.make_pass_decorator(Stratis)
@@ -196,8 +206,8 @@ def resident_names(stratis, unit_number):
 @click.argument('res_last_name', metavar='<res_last_name>')
 @click.argument('unit_number')
 @pass_stratis
-def is_moved_in(stratis, is_moved_in, res_first_name, res_last_name, unit_number):
-    """Move in True, move out False """
+def move_in(stratis, is_moved_in, res_first_name, res_last_name, unit_number):
+    """Move in true, move out false """
     stratis.move_resident(is_moved_in, res_first_name, res_last_name, unit_number) 
 
 if __name__ == '__main__':
