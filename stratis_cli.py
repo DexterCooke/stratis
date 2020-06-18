@@ -121,7 +121,7 @@ class Stratis:
         resident_data['unit'] = int(unit_number)
 
         #Create dictionaries with resident controlled devices
-        resident_thermostats = self._get_resident_controlled_device(thermostats, is_resident_admin, unit_number, 'thermostat')
+        resident_thermostats = self._get_resident_controlled_device(thermostats, is_resident_admin, unit_number, 'thermostats')
         resident_lights = self._get_resident_controlled_device(lights, is_resident_admin, unit_number, 'lights')
         resident_locks = self._get_resident_controlled_device(locks, is_resident_admin, unit_number, 'locks')
 
@@ -164,12 +164,14 @@ class Stratis:
             if data not in self.valid_residents:
                 self.valid_residents.append(data)
                 self._write_file(self.valid_residents, 'property_data_changes.json')
+                print("Resident moved in")
 
         if str(is_moved_in) == 'false':
             for idx, val in enumerate(self.valid_residents):
                 if res_first_name == self.valid_residents[idx]['first_name'] and res_last_name == self.valid_residents[idx]['last_name']:
                     del(self.valid_residents[idx])
                     self._write_file(self.valid_residents, 'property_data_changes.json')
+                    print("Resident moved out")
             
 
 
@@ -180,7 +182,14 @@ pass_stratis = click.make_pass_decorator(Stratis)
 @click.argument('user_last_name', metavar='<last_first_name>')
 @click.pass_context
 def cli(ctx, user_first_name, user_last_name):
-    """Admin users are able to get data on residents"""
+    """Admin users are able to get data on residents
+
+    \b
+    command syntax:
+    resident-info:  stratis USER FIRST NAME USER_LAST_NAME resident-info RESIDENT_FIRST_NAME RESIDENT_LAST_NAME
+    resident-names: stratis USER_FIRST_NAME USER_LAST_NAME resident-names RESIDENT_UNIT_NUMBER
+    move-in:        stratis USER_FIRST_NAME USER_LAST_NAME move-in (true/false) RESIDENT_FIRST_NAME RESIDENT_LAST_NAME RESIDENT_UNIT_NUMBER
+    """
     ctx.obj = Stratis(user_first_name, user_last_name)
 
 
@@ -197,7 +206,7 @@ def resident_info(stratis, res_first_name, res_last_name):
 @click.argument('unit_number')
 @pass_stratis
 def resident_names(stratis, unit_number):
-    """Get names of resident(s) in unit """
+    """Get names of resident(s) in unit"""
     stratis.resident_names(unit_number)
 
 @cli.command()
@@ -207,7 +216,7 @@ def resident_names(stratis, unit_number):
 @click.argument('unit_number')
 @pass_stratis
 def move_in(stratis, is_moved_in, res_first_name, res_last_name, unit_number):
-    """Move in true, move out false """
+    """Move residents in or out of a unit"""
     stratis.move_resident(is_moved_in, res_first_name, res_last_name, unit_number) 
 
 if __name__ == '__main__':

@@ -6,6 +6,7 @@ setup(
     py_modules=['stratis_cli'],
     install_requires=[
         'Click',
+        'setuptools<45',
     ],
     entry_points='''
         [console_scripts]
