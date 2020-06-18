@@ -3,3 +3,4 @@ venv/
 .pyc
 .vscode
 property_data_changes.json
+*.egg-info
