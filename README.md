@@ -1,3 +1,6 @@
+This is an example of using the the Click library to create a CLI tool. 
+This tool is able to see which residents live in a specific units in an apartment building. You can move in or move out residents from apartments.
+
 How to run:
 1. create a virtual environment: >virtualenv virtualenv
 2. > source venv/bin/activate
@@ -28,15 +31,3 @@ To move out resident type:
     > stratis Ty Adams move-in false Dexter Cooke 999
 output:
     > Resident moved out
-
-
-NOTES:
-    1. For resident Duane Valasquez I changed the 'a' to a regular 'a' because I didn't know how to handle that character
-    2. I noticed Mackenzie Carroll, unit 102 doesnt' have thermostat and unit 101 has two thermostats, I didnt' change the json
-       file but wasn't sure if thats typo.
-
-
-
-
-
-
